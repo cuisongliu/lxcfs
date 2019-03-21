@@ -9,6 +9,7 @@ steps:
 - name: build-fist
   image: pivotaldata/centos-gcc-toolchain:6-slim
   commands:
+    - apt-get install software-properties-common -y
     - add-apt-repository ppa:ubuntu-lxc/daily -y
     - apt-get update -qq
     - apt-get -y install -qq libfuse-dev libdbus-glib-1-dev libglib2.0-dev coreutils cgmanager
