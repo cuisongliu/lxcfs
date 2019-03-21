@@ -1,0 +1,14 @@
+kind: pipeline
+name: default
+
+workspace:
+   base: /c
+   path: src/github.com/cuisongliu/lxcfs/
+
+steps:
+- name: build-fist
+  image: gcc:8
+  commands:
+     - ./bootstrap.sh
+     - ./configure
+     -  make -j4 && make tests
