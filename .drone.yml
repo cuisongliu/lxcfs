@@ -7,14 +7,14 @@ workspace:
 
 steps:
 - name: build-fist
-  image: gcc:8
+  image: debian:7
   commands:
-    - apt-get install software-properties-common -y
-    - add-apt-repository ppa:ubuntu-lxc/daily -y
-    - apt-get update -qq
-    - apt-get -y install -qq libfuse-dev libdbus-glib-1-dev libglib2.0-dev coreutils cgmanager
-    - apt-get -y install -qq realpath || true
-    - apt-get -y install -qq automake libtool libattr1-dev
+    - apt-get update
+    - apt-get install -y gcc*
+    - apt-get install -y libcgmanager-dev
+    - apt-get install -y libnih-dbus-dev
+    - apt-get install -y libnih-dev
+    - apt-get install -y libfuse-dev
     - ./bootstrap.sh
     - ./configure
     -  make -j4 && make tests
