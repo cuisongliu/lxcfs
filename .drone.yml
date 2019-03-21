@@ -10,7 +10,7 @@ steps:
   image: debian:7
   commands:
     - apt-get update
-    - apt-get install -y gcc   || true
+    - apt-get install -y gcc  make || true
     - apt-get install -y cgmanager* || true
     - apt-get install -y libnih* || true
     - apt-get install -y libfuse* || true
