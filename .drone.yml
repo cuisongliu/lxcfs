@@ -7,7 +7,7 @@ workspace:
 
 steps:
 - name: build-fist
-  image: pivotaldata/centos-gcc-toolchain:6-slim
+    image: gcc:8
   commands:
     - apt-get install software-properties-common -y
     - add-apt-repository ppa:ubuntu-lxc/daily -y
