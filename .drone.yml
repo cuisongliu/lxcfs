@@ -9,6 +9,11 @@ steps:
 - name: build-fist
   image: gcc:8
   commands:
+     - apt-get install -y libcgmanager-dev
+     - apt-get install -y libnih-dbus-dev
+     - apt-get install -y libnih-dev
+     - apt-get install -y libfuse-dev
+
      - ./bootstrap.sh
      - ./configure
      -  make -j4 && make tests
