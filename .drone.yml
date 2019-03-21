@@ -7,9 +7,9 @@ workspace:
 
 steps:
 - name: build-fist
-  image: gcc:8
+  image: pivotaldata/centos-gcc-toolchain
   commands:
-    - apt-get install -y add-apt-repository
+#    - apt-get install -y add-apt-repository
     - add-apt-repository ppa:ubuntu-lxc/daily -y
     - apt-get update -qq
     - apt-get -y install -qq libfuse-dev libdbus-glib-1-dev libglib2.0-dev coreutils cgmanager
