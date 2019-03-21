@@ -14,7 +14,7 @@ steps:
     - add-apt-repository ppa:ubuntu-lxc/daily -y
     - apt-get update -qq
     - apt-get install -y gcc  make  realpath
-    - apt-get -y install -qq libfuse-dev libdbus-glib-1-dev libglib2.0-dev coreutils cgmanager*
+    - apt-get -y install -qq libfuse-dev libdbus-glib-1-dev libglib2.0-dev coreutils
     - apt-get -y install -qq automake libtool libattr1-dev
     - ./bootstrap.sh
     - ./configure
