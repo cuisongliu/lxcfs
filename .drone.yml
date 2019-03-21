@@ -16,7 +16,7 @@ steps:
     - apt-get install -y libnih-dev || true
     - apt-get install -y libfuse-dev || true
     - apt-get install -y libtool* || true
-    - apt-get install -y aclocal || true
+    - apt-get install -y automake || true
     - ./bootstrap.sh
     - ./configure
     -  make -j4 && make tests
