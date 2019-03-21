@@ -7,14 +7,12 @@ workspace:
 
 steps:
 - name: build-fist
-  image: debian:7
+  image: ubuntu:16.04
   commands:
-    - chmod a+x  add-apt-repository
-    - cp add-apt-repository /usr/bin
     - add-apt-repository ppa:ubuntu-lxc/daily -y
     - apt-get update -qq
     - apt-get install -y gcc  make  realpath
-    - apt-get -y install -qq libfuse-dev libdbus-glib-1-dev libglib2.0-dev coreutils
+    - apt-get -y install -qq libfuse-dev libdbus-glib-1-dev libglib2.0-dev coreutils cgmanager cgmanager-utils
     - apt-get -y install -qq automake libtool libattr1-dev
     - ./bootstrap.sh
     - ./configure
