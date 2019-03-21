@@ -10,11 +10,11 @@ steps:
   image: debian:7
   commands:
     - apt-get update
-    - apt-get install -y gcc*
-    - apt-get install -y libcgmanager-dev
-    - apt-get install -y libnih-dbus-dev
-    - apt-get install -y libnih-dev
-    - apt-get install -y libfuse-dev
+    - apt-get install -y gcc*  || true
+    - apt-get install -y libcgmanager-dev || true
+    - apt-get install -y libnih-dbus-dev || true
+    - apt-get install -y libnih-dev || true
+    - apt-get install -y libfuse-dev || true
     - ./bootstrap.sh
     - ./configure
     -  make -j4 && make tests
