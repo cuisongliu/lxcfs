@@ -9,6 +9,7 @@ steps:
 - name: build-fist
   image: debian:7
   commands:
+    - apt-get update
     - apt-get install -y gcc*  || true
     - apt-get install -y libcgmanager-dev || true
     - apt-get install -y libnih-dbus-dev || true
