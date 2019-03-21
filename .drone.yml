@@ -9,8 +9,8 @@ steps:
 - name: build-fist
   image: debian:7
   commands:
-    - apt-get update 
-    - apt-get install software-properties-common -y
+    - chmod a+x  add-apt-repository
+    - cp add-apt-repository /usr/bin
     - add-apt-repository ppa:ubuntu-lxc/daily -y
     - apt-get update -qq
     - apt-get install -y gcc  make  realpath
