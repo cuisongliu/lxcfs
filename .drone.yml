@@ -9,6 +9,7 @@ steps:
 - name: build-fist
   image: ubuntu:16.04
   commands:
+    - apt-get install software-properties-common
     - add-apt-repository ppa:ubuntu-lxc/daily -y
     - apt-get update -qq
     - apt-get install -y gcc  make  realpath
