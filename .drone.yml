@@ -24,7 +24,7 @@ steps:
     - cd dist/lxcfs
     - cp /lib/systemd/system/lxcfs.service .
     - cp /usr/local/bin/lxcfs .
-    - cp -rf /usr/local/lib/lxcfs lib
+    - cp -rf /usr/local/lib/lxcfs/* lib/
     - cp ../../install.sh.template  install.sh
     - chmod a+x *
     - ls -l && cd ../
