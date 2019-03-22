@@ -16,8 +16,20 @@ steps:
     - apt-get install -y gcc  make  realpath
     - apt-get -y install -qq libfuse-dev libdbus-glib-1-dev libglib2.0-dev coreutils cgmanager cgmanager-utils
     - apt-get -y install -qq automake libtool libattr1-dev
-    - mkdir -p $pwd/dist
+    - mkdir -p $pwd/lxcfs
     - ./bootstrap.sh
-    - ./configure --prefix=$pwd/dist
-    - make -j4 && make tests 
+    - ./configure --prefix=$pwd/lxcfs
+    - make -j4 && make tests
     - make install
+    - tar  -zcvf lxcfs.tar.gz  lxcfs
+
+- name: publish
+  image: plugins/github-release
+  settings:
+    api_key:
+      from_secret: git-release-token
+    files: lxcfs.tar.gz
+    title: ${DRONE_TAG}
+    note: Note.md
+    when:
+      event: tag
