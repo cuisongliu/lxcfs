@@ -18,7 +18,7 @@ steps:
     - apt-get -y install -qq automake libtool libattr1-dev
     - mkdir -p /opt/lxcfs
     - ./bootstrap.sh
-    - ./configure --prefix=/opt/lxcfs
+    - ./configure --prefix=/opt/lxcfs --enable-shared=no --enable-static=yes
     - make -j4 && make tests
     - make install
     - mkdir -p dist
