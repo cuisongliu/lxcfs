@@ -29,18 +29,18 @@ steps:
     - chmod a+x *
     - ls -l && cd ../
     - tar  -zcvf lxcfs.tar.gz  lxcfs
-#  when:
-#    event:
-#      - tag
-#
-#- name: publish
-#  image: plugins/github-release
-#  settings:
-#    api_key:
-#      from_secret: git-release-token
-#    files: dist/lxcfs.tar.gz
-#    title: ${DRONE_TAG}
-#    note: Note.md
-#  when:
-#    event:
-#      - tag
+  when:
+    event:
+      - tag
+
+- name: publish
+  image: plugins/github-release
+  settings:
+    api_key:
+      from_secret: git-release-token
+    files: dist/lxcfs.tar.gz
+    title: ${DRONE_TAG}
+    note: Note.md
+  when:
+    event:
+      - tag
