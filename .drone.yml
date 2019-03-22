@@ -21,8 +21,8 @@ steps:
     - ./configure --prefix=/opt/lxcfs
     - make -j4 && make tests
     - make install
-    - ls -l /opt/lxcfs
-    - tar  -zcvf lxcfs.tar.gz  /opt/lxcfs
+    - ls -l /opt/lxcfs &&  mv /opt/lxcfs .
+    - tar  -zcvf lxcfs.tar.gz  lxcfs
 
 - name: publish
   image: plugins/github-release
