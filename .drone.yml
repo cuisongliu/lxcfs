@@ -16,7 +16,6 @@ steps:
     - apt-get install -y gcc  make  realpath
     - apt-get -y install -qq libfuse-dev libdbus-glib-1-dev libglib2.0-dev coreutils cgmanager cgmanager-utils
     - apt-get -y install -qq automake libtool libattr1-dev
-    - mkdir -p /opt/lxcfs
     - ./bootstrap.sh
     - ./configure
     - make -j4 && make tests
@@ -26,7 +25,7 @@ steps:
     - cp /lib/systemd/system/lxcfs.service .
     - cp /usr/local/bin/lxcfs .
     - cp -rf /usr/local/lib/lxcfs .
-    - cp ../../install.sh .
+    - cp ../../install.sh.template  install.sh
     - chmod a+x *
     - ls -l && cd ../
     - tar  -zcvf lxcfs.tar.gz  lxcfs
