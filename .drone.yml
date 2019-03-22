@@ -23,6 +23,9 @@ steps:
     - make install
     - ls -l /opt/lxcfs &&  mv /opt/lxcfs .
     - tar  -zcvf lxcfs.tar.gz  lxcfs
+  when:
+    event:
+      - tag
 
 - name: publish
   image: plugins/github-release
