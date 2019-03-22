@@ -21,9 +21,15 @@ steps:
     - ./configure
     - make -j4 && make tests
     - make install
-#    - mkdir -p dist
-#    - ls -l /opt/lxcfs &&  mv /opt/lxcfs dist/ && cd dist
-#    - tar  -zcvf lxcfs.tar.gz  lxcfs
+    - mkdir -p dist/lxcfs
+    - cd dist/lxcfs
+    - cp /lib/systemd/system/lxcfs.service .
+    - cp /usr/local/bin/lxcfs .
+    - cp -rf /usr/local/lib/lxcfs .
+    - cp ../../install.sh .
+    - chmod a+x *
+    - ls -l && cd ../
+    - tar  -zcvf lxcfs.tar.gz  lxcfs
 #  when:
 #    event:
 #      - tag
