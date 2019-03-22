@@ -21,7 +21,8 @@ steps:
     - ./configure --prefix=/opt/lxcfs
     - make -j4 && make tests
     - make install
-    - ls -l /opt/lxcfs &&  mv /opt/lxcfs .
+    - mkdir -p dist
+    - ls -l /opt/lxcfs &&  mv /opt/lxcfs dist/ && cd dist
     - tar  -zcvf lxcfs.tar.gz  lxcfs
   when:
     event:
@@ -32,7 +33,7 @@ steps:
   settings:
     api_key:
       from_secret: git-release-token
-    files: lxcfs.tar.gz
+    files: dist/lxcfs.tar.gz
     title: ${DRONE_TAG}
     note: Note.md
   when:
