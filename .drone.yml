@@ -18,24 +18,24 @@ steps:
     - apt-get -y install -qq automake libtool libattr1-dev
     - mkdir -p /opt/lxcfs
     - ./bootstrap.sh
-    - ./configure --prefix=/opt/lxcfs --enable-shared=no --enable-static=yes
+    - ./configure
     - make -j4 && make tests
     - make install
-    - mkdir -p dist
-    - ls -l /opt/lxcfs &&  mv /opt/lxcfs dist/ && cd dist
-    - tar  -zcvf lxcfs.tar.gz  lxcfs
-  when:
-    event:
-      - tag
-
-- name: publish
-  image: plugins/github-release
-  settings:
-    api_key:
-      from_secret: git-release-token
-    files: dist/lxcfs.tar.gz
-    title: ${DRONE_TAG}
-    note: Note.md
-  when:
-    event:
-      - tag
+#    - mkdir -p dist
+#    - ls -l /opt/lxcfs &&  mv /opt/lxcfs dist/ && cd dist
+#    - tar  -zcvf lxcfs.tar.gz  lxcfs
+#  when:
+#    event:
+#      - tag
+#
+#- name: publish
+#  image: plugins/github-release
+#  settings:
+#    api_key:
+#      from_secret: git-release-token
+#    files: dist/lxcfs.tar.gz
+#    title: ${DRONE_TAG}
+#    note: Note.md
+#  when:
+#    event:
+#      - tag
