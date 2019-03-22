@@ -26,6 +26,7 @@ steps:
     - cp /usr/local/bin/lxcfs .
     - cp -rf /usr/local/lib/lxcfs/* lib/
     - cp ../../install.sh.template  install.sh
+    - cp ../../uninstall.sh.template  uninstall.sh
     - chmod a+x *
     - ls -l && cd ../
     - tar  -zcvf lxcfs.tar.gz  lxcfs

@@ -5,7 +5,7 @@ Before=lxc.service
 Documentation=man:lxcfs(1)
 
 [Service]
-ExecStart=/usr/bin/lxcfs /var/lib/lxcfs/
+ExecStart=/usr/local/bin/lxcfs /var/lib/lxcfs/
 KillMode=process
 Restart=on-failure
 ExecStopPost=-/bin/fusermount -u /var/lib/lxcfs
