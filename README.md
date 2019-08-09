@@ -15,6 +15,7 @@ such as:
 /proc/stat
 /proc/swaps
 /proc/uptime
+/sys/devices/system/cpu/online
 ```
 
 are container aware such that the values displayed (e.g. in `/proc/uptime`)
@@ -60,3 +61,20 @@ send `SIGUSR1` to the pid of the running `LXCFS` process. This can be as simple
 as doing:
 
     kill -s USR1 $(pidof lxcfs)
+
+## Using with Docker
+
+```
+docker run -it -m 256m --memory-swap 256m \
+      -v /var/lib/lxcfs/proc/cpuinfo:/proc/cpuinfo:rw \
+      -v /var/lib/lxcfs/proc/diskstats:/proc/diskstats:rw \
+      -v /var/lib/lxcfs/proc/meminfo:/proc/meminfo:rw \
+      -v /var/lib/lxcfs/proc/stat:/proc/stat:rw \
+      -v /var/lib/lxcfs/proc/swaps:/proc/swaps:rw \
+      -v /var/lib/lxcfs/proc/uptime:/proc/uptime:rw \
+      ubuntu:18.04 /bin/bash
+ ```
+
+ In a system with swap enabled, the parameter "-u" can be used to set all values in "meminfo" that refer to the swap to 0.
+
+ sudo lxcfs -u /var/lib/lxcfs

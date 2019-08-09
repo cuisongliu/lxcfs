@@ -8,18 +8,23 @@ AM_CFLAGS += $(FUSE_CFLAGS)
 AM_CFLAGS += -DLIBDIR=\"$(LIBDIR)\"
 AM_LDFLAGS = $(FUSE_LIBS) -pthread
 #AM_CFLAGS += -DDEBUG
+#AM_CFLAGS += -DVERBOSE
 
 AM_CFLAGS += -DRUNTIME_PATH=\"$(RUNTIME_PATH)\"
 
-liblxcfs_la_SOURCES = macro.h bindings.c cpuset.c bindings.h
+liblxcfs_la_SOURCES = bindings.c bindings.h \
+		      cpuset.c \
+		      sysfs_fuse.c sysfs_fuse.h
 liblxcfs_la_CFLAGS = $(AM_CFLAGS)
 liblxcfs_la_LDFLAGS = $(AM_CFLAGS) -module -avoid-version -shared
 
-liblxcfstest_la_SOURCES = bindings.c cpuset.c bindings.h macro.h
+liblxcfstest_la_SOURCES = bindings.c bindings.h \
+			  cpuset.c \
+			  sysfs_fuse.c sysfs_fuse.h
 liblxcfstest_la_CFLAGS = $(AM_CFLAGS) -DRELOADTEST
 liblxcfstest_la_LDFLAGS = $(AM_CFLAGS) -module -avoid-version -shared
 
-noinst_HEADERS = bindings.h macro.h
+noinst_HEADERS = bindings.h macro.h sysfs_fuse.h
 
 sodir=$(libdir)
 lxcfs_LTLIBRARIES = liblxcfs.la
@@ -33,6 +38,7 @@ bin_PROGRAMS = lxcfs
 
 EXTRA_DIST = \
 	lxcfs.man.add
+	lxcfs.spec
 
 if HAVE_HELP2MAN
 man_MANS = lxcfs.1
