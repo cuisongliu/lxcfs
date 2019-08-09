@@ -17,6 +17,7 @@
 #include <libgen.h>
 #include <pthread.h>
 #include <sched.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -39,9 +40,6 @@
 #include "bindings.h"
 #include "config.h" // for VERSION
 
-/* Maximum number for 64 bit integer is a string with 21 digits: 2^64 - 1 = 21 */
-#define LXCFS_NUMSTRLEN64 21
-
 /* Define pivot_root() if missing from the C library */
 #ifndef HAVE_PIVOT_ROOT
 static int pivot_root(const char * new_root, const char * put_old)
@@ -56,29 +54,6 @@ return -1;
 #else
 extern int pivot_root(const char * new_root, const char * put_old);
 #endif
-
-enum {
-	LXC_TYPE_CGDIR,
-	LXC_TYPE_CGFILE,
-	LXC_TYPE_PROC_MEMINFO,
-	LXC_TYPE_PROC_CPUINFO,
-	LXC_TYPE_PROC_UPTIME,
-	LXC_TYPE_PROC_STAT,
-	LXC_TYPE_PROC_DISKSTATS,
-	LXC_TYPE_PROC_SWAPS,
-	LXC_TYPE_PROC_LOADAVG,
-};
-
-struct file_info {
-	char *controller;
-	char *cgroup;
-	char *file;
-	int type;
-	char *buf;  // unused as of yet
-	int buflen;
-	int size; //actual data size
-	int cached;
-};
 
 struct cpuacct_usage {
 	uint64_t user;
@@ -395,9 +370,6 @@ static void free_cpuview()
 			cpuview_free_head(proc_stat_history[i]);
 	}
 }
-
-/* Reserve buffer size to account for file size changes. */
-#define BUF_RESERVE_SIZE 512
 
 /*
  * A table caching which pid is init for a pid namespace.
@@ -1416,7 +1388,7 @@ out:
 	return ret;
 }
 
-static pid_t lookup_initpid_in_store(pid_t qpid)
+pid_t lookup_initpid_in_store(pid_t qpid)
 {
 	pid_t answer = 0;
 	struct stat sb;
@@ -1465,19 +1437,22 @@ again:
 	return 0;
 }
 
-
 /*
- * append pid to *src.
- * src: a pointer to a char* in which ot append the pid.
+ * append the given formatted string to *src.
+ * src: a pointer to a char* in which to append the formatted string.
  * sz: the number of characters printed so far, minus trailing \0.
  * asz: the allocated size so far
- * pid: the pid to append
+ * format: string format. See printf for details.
+ * ...: varargs. See printf for details.
  */
-static void must_strcat_pid(char **src, size_t *sz, size_t *asz, pid_t pid)
+static void must_strcat(char **src, size_t *sz, size_t *asz, const char *format, ...)
 {
-	char tmp[30];
+	char tmp[BUF_RESERVE_SIZE];
+	va_list		args;
 
-	int tmplen = sprintf(tmp, "%d\n", (int)pid);
+	va_start (args, format);
+	int tmplen = vsnprintf(tmp, BUF_RESERVE_SIZE, format, args);
+	va_end(args);
 
 	if (!*src || tmplen + *sz + 1 >= *asz) {
 		char *tmp;
@@ -1489,6 +1464,18 @@ static void must_strcat_pid(char **src, size_t *sz, size_t *asz, pid_t pid)
 	}
 	memcpy((*src) +*sz , tmp, tmplen+1); /* include the \0 */
 	*sz += tmplen;
+}
+
+/*
+ * append pid to *src.
+ * src: a pointer to a char* in which ot append the pid.
+ * sz: the number of characters printed so far, minus trailing \0.
+ * asz: the allocated size so far
+ * pid: the pid to append
+ */
+static void must_strcat_pid(char **src, size_t *sz, size_t *asz, pid_t pid)
+{
+	must_strcat(src, sz, asz, "%d\n", (int)pid);
 }
 
 /*
@@ -1645,7 +1632,7 @@ static void stripnewline(char *x)
 		x[l-1] = '\0';
 }
 
-static char *get_pid_cgroup(pid_t pid, const char *contrl)
+char *get_pid_cgroup(pid_t pid, const char *contrl)
 {
 	int cfd;
 	char fnam[PROCLEN];
@@ -1732,7 +1719,7 @@ out:
 }
 
 #define INITSCOPE "/init.scope"
-static void prune_init_slice(char *cg)
+void prune_init_slice(char *cg)
 {
 	char *point;
 	size_t cg_len = strlen(cg), initscope_len = strlen(INITSCOPE);
@@ -2169,7 +2156,7 @@ out:
 	return ret;
 }
 
-static void do_release_file_info(struct fuse_file_info *fi)
+void do_release_file_info(struct fuse_file_info *fi)
 {
 	struct file_info *f = (struct file_info *)fi->fh;
 
@@ -3358,8 +3345,7 @@ static void get_blkio_io_value(char *str, unsigned major, unsigned minor, char *
 	}
 }
 
-static int read_file(const char *path, char *buf, size_t size,
-		     struct file_info *d)
+int read_file(const char *path, char *buf, size_t size, struct file_info *d)
 {
 	size_t linelen = 0, total_len = 0, rv = 0;
 	char *line = NULL;
@@ -3518,22 +3504,22 @@ static int proc_meminfo_read(char *buf, size_t size, off_t offset,
 		} else if (startswith(line, "MemAvailable:")) {
 			snprintf(lbuf, 100, "MemAvailable:   %8lu kB\n", memlimit - memusage + cached);
 			printme = lbuf;
-		} else if (startswith(line, "SwapTotal:") && memswlimit > 0 && opts->swap_off == false) {
+		} else if (startswith(line, "SwapTotal:") && memswlimit > 0 && opts && opts->swap_off == false) {
 			sscanf(line+sizeof("SwapTotal:")-1, "%lu", &hostswtotal);
 			if (hostswtotal < memswlimit)
 				memswlimit = hostswtotal;
 			snprintf(lbuf, 100, "SwapTotal:      %8lu kB\n", memswlimit);
 			printme = lbuf;
-		} else if (startswith(line, "SwapTotal:") && opts->swap_off == true) {
+		} else if (startswith(line, "SwapTotal:") && opts && opts->swap_off == true) {
 			snprintf(lbuf, 100, "SwapTotal:      %8lu kB\n", 0UL);
 			printme = lbuf;
-		} else if (startswith(line, "SwapFree:") && memswlimit > 0 && memswusage > 0 && opts->swap_off == false) {
+		} else if (startswith(line, "SwapFree:") && memswlimit > 0 && memswusage > 0 && opts && opts->swap_off == false) {
 			unsigned long swaptotal = memswlimit,
 					swapusage = memswusage - memusage,
 					swapfree = swapusage < swaptotal ? swaptotal - swapusage : 0;
 			snprintf(lbuf, 100, "SwapFree:       %8lu kB\n", swapfree);
 			printme = lbuf;
-		} else if (startswith(line, "SwapFree:") && opts->swap_off == true) {
+		} else if (startswith(line, "SwapFree:") && opts && opts->swap_off == true) {
 			snprintf(lbuf, 100, "SwapFree:       %8lu kB\n", 0UL);
 			printme = lbuf;
 		} else if (startswith(line, "Slab:")) {
@@ -3629,7 +3615,7 @@ err:
  * Read the cpuset.cpus for cg
  * Return the answer in a newly allocated string which must be freed
  */
-static char *get_cpuset(const char *cg)
+char *get_cpuset(const char *cg)
 {
 	char *answer;
 
@@ -3700,6 +3686,35 @@ int max_cpu_count(const char *cg)
 	 */
 	if ((cfs_quota % cfs_period) > 0)
 		rv += 1;
+
+	nprocs = get_nprocs();
+
+	if (rv > nprocs)
+		rv = nprocs;
+
+	return rv;
+}
+
+/*
+ * Return the exact number of visible CPUs based on CPU quotas.
+ * If there is no quota set, zero is returned.
+ */
+static double exact_cpu_count(const char *cg)
+{
+	double rv;
+	int nprocs;
+	int64_t cfs_quota, cfs_period;
+
+	if (!read_cpu_cfs_param(cg, "quota", &cfs_quota))
+		return 0;
+
+	if (!read_cpu_cfs_param(cg, "period", &cfs_period))
+		return 0;
+
+	if (cfs_quota <= 0 || cfs_period <= 0)
+		return 0;
+
+	rv = (double)cfs_quota / (double)cfs_period;
 
 	nprocs = get_nprocs();
 
@@ -3995,10 +4010,11 @@ static uint64_t get_reaper_start_time(pid_t pid)
 	return starttime;
 }
 
-static uint64_t get_reaper_start_time_in_sec(pid_t pid)
+static double get_reaper_start_time_in_sec(pid_t pid)
 {
-	uint64_t clockticks;
-	int64_t ticks_per_sec;
+	uint64_t clockticks, ticks_per_sec;
+	int64_t ret;
+	double res = 0;
 
 	clockticks = get_reaper_start_time(pid);
 	if (clockticks == 0 && errno == EINVAL) {
@@ -4006,20 +4022,23 @@ static uint64_t get_reaper_start_time_in_sec(pid_t pid)
 		return 0;
 	}
 
-	ticks_per_sec = sysconf(_SC_CLK_TCK);
-	if (ticks_per_sec < 0 && errno == EINVAL) {
+	ret = sysconf(_SC_CLK_TCK);
+	if (ret < 0 && errno == EINVAL) {
 		lxcfs_debug(
 		    "%s\n",
 		    "failed to determine number of clock ticks in a second");
 		return 0;
 	}
 
-	return (clockticks /= ticks_per_sec);
+	ticks_per_sec = (uint64_t)ret;
+	res = (double)clockticks / ticks_per_sec;
+	return res;
 }
 
-static uint64_t get_reaper_age(pid_t pid)
+static double get_reaper_age(pid_t pid)
 {
-	uint64_t procstart, uptime, procage;
+	uint64_t uptime_ms;
+	double procstart, procage;
 
 	/* We need to substract the time the process has started since system
 	 * boot minus the time when the system has started to get the actual
@@ -4034,13 +4053,14 @@ static uint64_t get_reaper_age(pid_t pid)
 		ret = clock_gettime(CLOCK_BOOTTIME, &spec);
 		if (ret < 0)
 			return 0;
+
 		/* We could make this more precise here by using the tv_nsec
 		 * field in the timespec struct and convert it to milliseconds
 		 * and then create a double for the seconds and milliseconds but
 		 * that seems more work than it is worth.
 		 */
-		uptime = spec.tv_sec;
-		procage = uptime - procstart;
+		uptime_ms = (spec.tv_sec * 1000) + (spec.tv_nsec * 1e-6);
+		procage = (uptime_ms - (procstart * 1000)) / 1000;
 	}
 
 	return procage;
@@ -4055,7 +4075,7 @@ static int read_cpuacct_usage_all(char *cg, char *cpuset, struct cpuacct_usage *
 {
 	int cpucount = get_nprocs_conf();
 	struct cpuacct_usage *cpu_usage;
-	int rv = 0, i, j, ret, read_pos = 0, read_cnt;
+	int rv = 0, i, j, ret;
 	int cg_cpu;
 	uint64_t cg_user, cg_system;
 	int64_t ticks_per_sec;
@@ -4064,7 +4084,7 @@ static int read_cpuacct_usage_all(char *cg, char *cpuset, struct cpuacct_usage *
 	ticks_per_sec = sysconf(_SC_CLK_TCK);
 
 	if (ticks_per_sec < 0 && errno == EINVAL) {
-		lxcfs_debug(
+		lxcfs_v(
 			"%s\n",
 			"read_cpuacct_usage_all failed to determine number of clock ticks "
 			"in a second");
@@ -4075,11 +4095,39 @@ static int read_cpuacct_usage_all(char *cg, char *cpuset, struct cpuacct_usage *
 	if (!cpu_usage)
 		return -ENOMEM;
 
+	memset(cpu_usage, 0, sizeof(struct cpuacct_usage) * cpucount);
 	if (!cgfs_get_value("cpuacct", cg, "cpuacct.usage_all", &usage_str)) {
-		rv = -1;
-		goto err;
+		// read cpuacct.usage_percpu instead
+		lxcfs_v("failed to read cpuacct.usage_all. reading cpuacct.usage_percpu instead\n%s", "");
+		if (!cgfs_get_value("cpuacct", cg, "cpuacct.usage_percpu", &usage_str)) {
+			rv = -1;
+			goto err;
+		}
+		lxcfs_v("usage_str: %s\n", usage_str);
+
+		// convert cpuacct.usage_percpu into cpuacct.usage_all
+		lxcfs_v("converting cpuacct.usage_percpu into cpuacct.usage_all\n%s", "");
+
+		char *data = NULL;
+		size_t sz = 0, asz = 0;
+
+		must_strcat(&data, &sz, &asz, "cpu user system\n");
+
+		int i = 0, read_pos = 0, read_cnt=0;
+		while (sscanf(usage_str + read_pos, "%lu %n", &cg_user, &read_cnt) > 0) {
+			lxcfs_debug("i: %d, cg_user: %lu, read_pos: %d, read_cnt: %d\n", i, cg_user, read_pos, read_cnt);
+			must_strcat(&data, &sz, &asz, "%d %lu 0\n", i, cg_user);
+			i++;
+			read_pos += read_cnt;
+		}
+
+		free(usage_str);
+		usage_str = data;
+
+		lxcfs_v("usage_str: %s\n", usage_str);
 	}
 
+	int read_pos = 0, read_cnt=0;
 	if (sscanf(usage_str, "cpu user system\n%n", &read_cnt) != 0) {
 		lxcfs_error("read_cpuacct_usage_all reading first line from "
 				"%s/cpuacct.usage_all failed.\n", cg);
@@ -4593,13 +4641,13 @@ static int cpuview_proc_stat(const char *cg, const char *cpuset, struct cpuacct_
 		threshold = total_sum / cpu_cnt * max_cpus;
 
 		for (curcpu = 0, i = -1; curcpu < nprocs; curcpu++) {
-			if (i == max_cpus)
-				break;
-
 			if (!stat_node->usage[curcpu].online)
 				continue;
 
 			i++;
+
+			if (i == max_cpus)
+				break;
 
 			if (diff[curcpu].user + diff[curcpu].system >= threshold)
 				continue;
@@ -4627,14 +4675,19 @@ static int cpuview_proc_stat(const char *cg, const char *cpuset, struct cpuacct_
 		if (system_surplus > 0)
 			lxcfs_debug("leftover system: %lu for %s\n", system_surplus, cg);
 
+		unsigned long diff_user = 0;
+		unsigned long diff_system = 0;
+		unsigned long diff_idle = 0;
+		unsigned long max_diff_idle = 0;
+		unsigned long max_diff_idle_index = 0;
 		for (curcpu = 0, i = -1; curcpu < nprocs; curcpu++) {
-			if (i == max_cpus)
-				break;
-
 			if (!stat_node->usage[curcpu].online)
 				continue;
 
 			i++;
+
+			if (i == max_cpus)
+				break;
 
 			stat_node->view[curcpu].user += diff[curcpu].user;
 			stat_node->view[curcpu].system += diff[curcpu].system;
@@ -4643,8 +4696,34 @@ static int cpuview_proc_stat(const char *cg, const char *cpuset, struct cpuacct_
 			user_sum += stat_node->view[curcpu].user;
 			system_sum += stat_node->view[curcpu].system;
 			idle_sum += stat_node->view[curcpu].idle;
-		}
 
+			diff_user += diff[curcpu].user;
+			diff_system += diff[curcpu].system;
+			diff_idle += diff[curcpu].idle;
+			if (diff[curcpu].idle > max_diff_idle) {
+				max_diff_idle = diff[curcpu].idle;
+				max_diff_idle_index = curcpu;
+			}
+
+			lxcfs_v("curcpu: %d, diff_user: %lu, diff_system: %lu, diff_idle: %lu\n", curcpu, diff[curcpu].user, diff[curcpu].system, diff[curcpu].idle);
+		}
+		lxcfs_v("total. diff_user: %lu, diff_system: %lu, diff_idle: %lu\n", diff_user, diff_system, diff_idle);
+
+		// revise cpu usage view to support partial cpu case
+		double exact_cpus = exact_cpu_count(cg);
+		if (exact_cpus < (double)max_cpus){
+			lxcfs_v("revising cpu usage view to match the exact cpu count [%f]\n", exact_cpus);
+			unsigned long delta = (unsigned long)((double)(diff_user + diff_system + diff_idle) * (1 - exact_cpus / (double)max_cpus));
+			lxcfs_v("delta: %lu\n", delta);
+			lxcfs_v("idle_sum before: %lu\n", idle_sum);
+			idle_sum = idle_sum > delta ? idle_sum - delta : 0;
+			lxcfs_v("idle_sum after: %lu\n", idle_sum);
+
+			curcpu = max_diff_idle_index;
+			lxcfs_v("curcpu: %d, idle before: %lu\n", curcpu, stat_node->view[curcpu].idle);
+			stat_node->view[curcpu].idle = stat_node->view[curcpu].idle > delta ? stat_node->view[curcpu].idle - delta : 0;
+			lxcfs_v("curcpu: %d, idle after: %lu\n", curcpu, stat_node->view[curcpu].idle);
+		}
 	} else {
 		for (curcpu = 0; curcpu < nprocs; curcpu++) {
 			if (!stat_node->usage[curcpu].online)
@@ -4666,12 +4745,12 @@ static int cpuview_proc_stat(const char *cg, const char *cpuset, struct cpuacct_
 			user_sum,
 			system_sum,
 			idle_sum);
+	lxcfs_v("cpu-all: %s\n", buf);
 
 	if (l < 0) {
 		perror("Error writing to cache");
 		rv = 0;
 		goto err;
-
 	}
 	if (l >= buf_size) {
 		lxcfs_error("%s\n", "Internal error: truncated write to cache.");
@@ -4698,6 +4777,7 @@ static int cpuview_proc_stat(const char *cg, const char *cpuset, struct cpuacct_
 				stat_node->view[curcpu].user,
 				stat_node->view[curcpu].system,
 				stat_node->view[curcpu].idle);
+		lxcfs_v("cpu: %s\n", buf);
 
 		if (l < 0) {
 			perror("Error writing to cache");
@@ -4800,9 +4880,11 @@ static int proc_stat_read(char *buf, size_t size, off_t offset,
 	}
 
 	pid_t initpid = lookup_initpid_in_store(fc->pid);
+	lxcfs_v("initpid: %d\n", initpid);
 	if (initpid <= 0)
 		initpid = fc->pid;
 	cg = get_pid_cgroup(initpid, "cpuset");
+	lxcfs_v("cg: %s\n", cg);
 	if (!cg)
 		return read_file("/proc/stat", buf, size, d);
 	prune_init_slice(cg);
@@ -4817,7 +4899,7 @@ static int proc_stat_read(char *buf, size_t size, off_t offset,
 	 * CPU usage. If not, values from the host's /proc/stat are used.
 	 */
 	if (read_cpuacct_usage_all(cg, cpuset, &cg_cpu_usage, &cg_cpu_usage_size) != 0) {
-		lxcfs_debug("%s\n", "proc_stat_read failed to read from cpuacct, "
+		lxcfs_v("%s\n", "proc_stat_read failed to read from cpuacct, "
 				"falling back to the host's /proc/stat");
 	}
 
@@ -5015,11 +5097,12 @@ err:
  * account as well. If someone has a clever solution for this please send a
  * patch!
  */
-static unsigned long get_reaper_busy(pid_t task)
+static double get_reaper_busy(pid_t task)
 {
 	pid_t initpid = lookup_initpid_in_store(task);
 	char *cgroup = NULL, *usage_str = NULL;
 	unsigned long usage = 0;
+	double res = 0;
 
 	if (initpid <= 0)
 		return 0;
@@ -5031,12 +5114,12 @@ static unsigned long get_reaper_busy(pid_t task)
 	if (!cgfs_get_value("cpuacct", cgroup, "cpuacct.usage", &usage_str))
 		goto out;
 	usage = strtoul(usage_str, NULL, 10);
-	usage /= 1000000000;
+	res = (double)usage / 1000000000;
 
 out:
 	free(cgroup);
 	free(usage_str);
-	return usage;
+	return res;
 }
 
 #if RELOADTEST
@@ -5060,10 +5143,10 @@ static int proc_uptime_read(char *buf, size_t size, off_t offset,
 {
 	struct fuse_context *fc = fuse_get_context();
 	struct file_info *d = (struct file_info *)fi->fh;
-	unsigned long int busytime = get_reaper_busy(fc->pid);
+	double busytime = get_reaper_busy(fc->pid);
 	char *cache = d->buf;
 	ssize_t total_len = 0;
-	uint64_t idletime, reaperage;
+	double idletime, reaperage;
 
 #if RELOADTEST
 	iwashere();
@@ -5088,7 +5171,7 @@ static int proc_uptime_read(char *buf, size_t size, off_t offset,
 	if (reaperage >= busytime)
 		idletime = reaperage - busytime;
 
-	total_len = snprintf(d->buf, d->buflen, "%"PRIu64".00 %"PRIu64".00\n", reaperage, idletime);
+	total_len = snprintf(d->buf, d->buflen, "%.2lf %.2lf\n", reaperage, idletime);
 	if (total_len < 0 || total_len >=  d->buflen){
 		lxcfs_error("%s\n", "failed to write to cache");
 		return 0;
