@@ -3,7 +3,7 @@ name: default
 
 workspace:
    base: /c
-   path: src/github.com/cuisongliu/
+   path: src/github.com/cuisongliu/lxcfs
 
 steps:
 - name: build
