@@ -6,7 +6,7 @@ workspace:
    path: src/github.com/cuisongliu/
 
 steps:
-- name: build-fist
+- name: build
   image: ubuntu:16.04
   commands:
     - apt-get update -qq
@@ -15,23 +15,24 @@ steps:
     - apt-get update -qq
     - apt-get install -y gcc  make  realpath
     - apt-get -y install -qq libfuse-dev libdbus-glib-1-dev libglib2.0-dev coreutils cgmanager cgmanager-utils
-    - apt-get -y install -qq automake libtool libattr1-dev
+    - apt-get -y install -qq automake libtool libattr1-dev git
+    - git clone -b ${DRONE_TAG=master} https://github.com/lxc/lxcfs
+    - cd lxcfs
     - ./bootstrap.sh
     - ./configure
     - make -j4 && make tests
     - make install
-    - git clone -b ${DRONE_TAG=master} https://github.com/lxc/lxcfs
-    - cd lxcfs
     - mkdir -p dist/lxcfs/lib
     - cd dist/lxcfs
     - cp /lib/systemd/system/lxcfs.service .
     - cp /usr/local/bin/lxcfs .
     - cp -rf /usr/local/lib/lxcfs/* lib/
-    - cp ../../install.sh.template  install.sh
-    - cp ../../uninstall.sh.template  uninstall.sh
+    - cp ../../../install.sh.template  install.sh
+    - cp ../../../uninstall.sh.template  uninstall.sh
     - chmod a+x *
     - ls -l && cd ../
     - tar -zcvf lxcfs.tar.gz  lxcfs
+    - mv lxcfs.tar.gz ../../ && cd ../../
     - ls -l
   when:
     event:
