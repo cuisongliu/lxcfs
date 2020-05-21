@@ -35,8 +35,8 @@ steps:
     - ls -l
   when:
     event:
-      - tag
       - push
+      - tag
 
 - name: publish
   image: plugins/github-release
