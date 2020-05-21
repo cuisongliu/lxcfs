@@ -44,7 +44,7 @@ steps:
   settings:
     api_key:
       from_secret: git-release-token
-    files: dist/lxcfs.tar.gz
+    files: lxcfs.tar.gz
     title: ${DRONE_TAG}
     note: Note.md
   when:
