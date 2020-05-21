@@ -3,7 +3,7 @@ name: default
 
 workspace:
    base: /c
-   path: src/github.com/cuisongliu/lxcfs/
+   path: src/github.com/cuisongliu/
 
 steps:
 - name: build-fist
@@ -20,6 +20,8 @@ steps:
     - ./configure
     - make -j4 && make tests
     - make install
+    - git clone -b ${DRONE_TAG=master} https://github.com/lxc/lxcfs
+    - cd lxcfs
     - mkdir -p dist/lxcfs/lib
     - cd dist/lxcfs
     - cp /lib/systemd/system/lxcfs.service .
@@ -29,10 +31,12 @@ steps:
     - cp ../../uninstall.sh.template  uninstall.sh
     - chmod a+x *
     - ls -l && cd ../
-    - tar  -zcvf lxcfs.tar.gz  lxcfs
+    - tar -zcvf lxcfs.tar.gz  lxcfs
+    - ls -l
   when:
     event:
       - tag
+      - push
 
 - name: publish
   image: plugins/github-release
